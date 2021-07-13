@@ -1,4 +1,4 @@
-# Alurakut - Live[Link](https://alurakut-indol-one.vercel.app)
+# Alurakut - [Live](https://alurakut-indol-one.vercel.app)
 
 Imersão React 3a edição Alura.
 
