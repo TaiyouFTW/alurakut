@@ -23,6 +23,28 @@ function ProfileSidebar(properties) {
   )
 }
 
+function ProfileRelationsBoxFollowers(properties) {
+  return (
+    <ProfileRelationsBoxWrapper>
+      <h2 className="smallTitle">
+        {properties.title} ({properties.items.length})
+      </h2>
+      <ul>
+        {properties.items.map((item) => {
+          return (
+            <li key={item}>
+              <a href={item.avatar_url}>
+                <img src={item.avatar_url} />
+                <span>{item.login}</span>
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </ProfileRelationsBoxWrapper>
+  )
+}
+
 export default function Home() {
   const randomUser = 'taiyouftw';
   const [communities, setCommunities] = React.useState([{
@@ -35,6 +57,17 @@ export default function Home() {
     name: 'Queria sorvete, mas era feijão',
     image: 'http://4.bp.blogspot.com/-kev3O816_hk/UIXk-TtxSoI/AAAAAAAABhc/TCR53xfkh-M/s1600/DSC05604.JPG'
   }]);
+
+  const [followers, setFollowers] = React.useState([]);
+  React.useEffect(function () {
+    fetch(`https://api.github.com/users/${randomUser}/followers`)
+      .then(function (userFollowers) {
+        return userFollowers.json();
+      })
+      .then(function (completeUserFollowers) {
+        setFollowers(completeUserFollowers);
+      })
+  }, [])
 
   const favUsers = [
     {
@@ -122,13 +155,16 @@ export default function Home() {
           </Box>
         </div>
         <div className="profileRelationsArea" style={{ gridArea: 'profileRelationsArea' }}>
-          <ProfileRelationsBoxWrapper>
-            <Relations title={'Pessoas da comunidade'} items={favUsers}></Relations>
-          </ProfileRelationsBoxWrapper>
+          <ProfileRelationsBoxFollowers title="Seguidores" items={followers} />
 
           <ProfileRelationsBoxWrapper>
             <Relations title={'Comunidades'} items={communities}></Relations>
           </ProfileRelationsBoxWrapper>
+
+          <ProfileRelationsBoxWrapper>
+            <Relations title={'Pessoas da comunidade'} items={favUsers}></Relations>
+          </ProfileRelationsBoxWrapper>
+
         </div>
       </MainGrid>
     </>
