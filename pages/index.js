@@ -1,4 +1,6 @@
 import React from 'react';
+import nookies from 'nookies';
+import jwt from 'jsonwebtoken';
 import MainGrid from '../src/components/MainGrid'
 import Box from '../src/components/Box'
 import { AlurakutMenu, AlurakutProfileSidebarMenuDefault, OrkutNostalgicIconSet } from '../src/lib/AlurakutCommons';
@@ -32,7 +34,7 @@ function ProfileRelationsBoxFollowers(properties) {
       <ul>
         {properties.items.map((item) => {
           return (
-            <li key={item}>
+            <li key={item.id}>
               <a href={item.avatar_url}>
                 <img src={item.avatar_url} />
                 <span>{item.login}</span>
@@ -45,19 +47,10 @@ function ProfileRelationsBoxFollowers(properties) {
   )
 }
 
-export default function Home() {
-  const randomUser = 'taiyouftw';
-  const [communities, setCommunities] = React.useState([{
-    id: '12802378123789378912789789123896123',
-    name: 'Eu odeio acordar cedo',
-    image: 'https://alurakut.vercel.app/capa-comunidade-01.jpg'
-  },
-  {
-    id: '12802378123789378912789789123896124',
-    name: 'Queria sorvete, mas era feijão',
-    image: 'http://4.bp.blogspot.com/-kev3O816_hk/UIXk-TtxSoI/AAAAAAAABhc/TCR53xfkh-M/s1600/DSC05604.JPG'
-  }]);
+export default function Home(props) {
+  const randomUser = props.githubUser;
 
+  const [communities, setCommunities] = React.useState([]);
   const [followers, setFollowers] = React.useState([]);
   React.useEffect(function () {
     fetch(`https://api.github.com/users/${randomUser}/followers`)
@@ -67,7 +60,21 @@ export default function Home() {
       .then(function (completeUserFollowers) {
         setFollowers(completeUserFollowers);
       })
+
+    fetch('/api/community', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        const updatedCommunities = data;
+        setCommunities(updatedCommunities);
+      })
   }, [])
+
+
 
   const favUsers = [
     {
@@ -125,12 +132,23 @@ export default function Home() {
               const dadosDoForm = new FormData(e.target);
 
               const community = {
-                id: new Date().toISOString(),
-                name: dadosDoForm.get('title'),
-                image: dadosDoForm.get('image'),
+                title: dadosDoForm.get('title'),
+                imageUrl: dadosDoForm.get('image'),
+                creatorSlug: randomUser,
               }
-              const updatedCommunities = [...communities, community];
-              setCommunities(updatedCommunities)
+
+              fetch('/api/community', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(community)
+              })
+                .then(async (response) => {
+                  const data = await response.json();
+                  const updatedCommunities = [...communities, data];
+                  setCommunities(updatedCommunities);
+                })
             }}>
               <div>
                 <input
@@ -158,7 +176,21 @@ export default function Home() {
           <ProfileRelationsBoxFollowers title="Seguidores" items={followers} />
 
           <ProfileRelationsBoxWrapper>
-            <Relations title={'Comunidades'} items={communities}></Relations>
+            <h2 className="smallTitle">
+              Comunidades ({communities.length})
+            </h2>
+            <ul>
+              {communities.slice(0, 6).map((item) => {
+                return (
+                  <li key={item.id}>
+                    <a href={`/communities/${item.id}`}>
+                      <img src={item.imageUrl} />
+                      <span>{item.title}</span>
+                    </a>
+                  </li>
+                )
+              })}
+            </ul>
           </ProfileRelationsBoxWrapper>
 
           <ProfileRelationsBoxWrapper>
@@ -169,4 +201,31 @@ export default function Home() {
       </MainGrid>
     </>
   )
+}
+
+export async function getServerSideProps(context) {
+  const cookies = nookies.get(context)
+  const token = cookies.USER_TOKEN;
+  const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
+    headers: {
+      Authorization: token
+    }
+  })
+    .then((resposta) => resposta.json())
+
+  if (!isAuthenticated) {
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      }
+    }
+  }
+
+  const { githubUser } = jwt.decode(token);
+  return {
+    props: {
+      githubUser
+    },
+  }
 }
